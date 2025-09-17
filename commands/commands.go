@@ -20,7 +20,7 @@ func GenerateCommands() map[string]CliCommand {
 	return map[string]CliCommand{
 		"exit": {
 			Name:        "exit",
-			Description: "Exit the Pokedex",
+			Description: "Exit program",
 			Callback:    Exit,
 		},
 		"help": {
@@ -30,12 +30,12 @@ func GenerateCommands() map[string]CliCommand {
 		},
 		"settoken": {
 			Name:        "set token",
-			Description: "Sets the auth and client token for requests",
+			Description: "Sets the auth and client token for v2 requests",
 			Callback:    SetTokens,
 		},
 		"getartist": {
 			Name:        "get artist",
-			Description: "Get an artists albums and playcounts",
+			Description: "Get an artists albums and playcounts for all tracks",
 			Callback:    GetArtistInfo,
 		},
 		"test": {
@@ -113,14 +113,23 @@ func GetArtistInfo(config *client.Config, data []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println()
 
 	// for each album, get the songs + their playcounts
+	fmt.Printf("Arist: %s\n", searchResponse.Artists.Items[0].Name)
+	fmt.Printf("Artist ID: %s\n", artistId)
 	for _, album := range albumsResponse.Items {
 		fmt.Printf("Album: %s\n", album.Name)
+		fmt.Printf("Album ID: %s\n", album.ID)
 	}
-
-	// details.Data.AlbumUnion.TracksV2.Items[0].Track.Playcount
+	albumDetails, err := sc.GetAlbumDetails(albumsResponse.Items[0].ID)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Printf("album name: %s\n", albumDetails.Data.AlbumUnion.Name)
+	for _, albumTrack := range albumDetails.Data.AlbumUnion.TracksV2.Items {
+		fmt.Printf("Track: %s, Playcount: %s\n", albumTrack.Track.Name, albumTrack.Track.Playcount)
+	}
 
 	// save data to disk
 	return nil

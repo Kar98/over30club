@@ -22,12 +22,12 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	config := client.Config{Scanner: scanner}
 	cmds := commands.GenerateCommands()
-	fmt.Print("Enter command > ")
+	fmt.Print(" > ")
 	for scanner.Scan() {
 		refreshConfig(&config)
 		input, err := commands.CleanInput(scanner.Text())
 		if err != nil {
-			fmt.Print("\nEnter command > ")
+			fmt.Print("\n > ")
 			continue
 		}
 		fmt.Println("Your command was: " + input[0])
@@ -40,7 +40,7 @@ func main() {
 		} else {
 			fmt.Println("Unknown command")
 		}
-		fmt.Print("Enter command > ")
+		fmt.Print(" > ")
 	}
 
 }

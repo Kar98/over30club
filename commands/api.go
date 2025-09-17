@@ -20,7 +20,7 @@ func NewSpotifyClient(config *client.Config) (*SpotifyClient, error) {
 	}
 	// load v1 token from file
 	var v1token string
-	v1token, err := getV1Token()
+	v1token, err := getV1Token(config)
 	// if not found then get new token from endpoint
 	if err != nil {
 		fmt.Println("Getting new v1 token")
@@ -37,21 +37,12 @@ func NewSpotifyClient(config *client.Config) (*SpotifyClient, error) {
 	}, nil
 }
 
-func getV1Token() (string, error) {
-	file, err := os.ReadFile(client.UserDataFile)
-	if err != nil {
-		return "", err
-	}
-	var config client.Config
-	err = json.Unmarshal(file, &config)
-	if err != nil {
-		return "", err
-	}
+func getV1Token(config *client.Config) (string, error) {
 	if config.V1.Token == "" {
 		return "", errors.New("no v1 token found")
 	}
 	// Check if token has expired
-	if config.V1.TokenExpiry.After(time.Now()) {
+	if config.V1.TokenExpiry.Before(time.Now()) {
 		return "", errors.New("token expired")
 	}
 
@@ -109,10 +100,10 @@ type SpotifyClient struct {
 	v2Auth  string
 }
 
-func (sc *SpotifyClient) Search(query string) (types.SearchResponse, error) {
+func (sc *SpotifyClient) Search(artistName string) (types.SearchResponse, error) {
 	client := &http.Client{}
 	// Get artist id
-	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=artist&market=AU&limit=1", query)
+	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=artist&market=AU&limit=1", artistName)
 	getArtistRes, err := http.NewRequest("GET", getArtistUrl, nil)
 	if err != nil {
 		return types.SearchResponse{}, err
@@ -123,6 +114,13 @@ func (sc *SpotifyClient) Search(query string) (types.SearchResponse, error) {
 		return types.SearchResponse{}, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		fmt.Println("request: ", getArtistUrl)
+		body, _ := io.ReadAll(res.Body)
+		fmt.Println("response: ", string(body))
+		return types.SearchResponse{}, fmt.Errorf("error when searching, status: %s", res.Status)
+	}
 
 	var searchResponse types.SearchResponse
 	bs, err := io.ReadAll(res.Body)
@@ -142,12 +140,20 @@ func (sc *SpotifyClient) GetAlbumList(artistId string) (types.GetAlbumResponse, 
 	if err != nil {
 		return types.GetAlbumResponse{}, err
 	}
+	sc.setV1Headers(req)
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
 		return types.GetAlbumResponse{}, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		fmt.Println("request: ", getAlbumsUrl)
+		body, _ := io.ReadAll(res.Body)
+		fmt.Println("response: ", string(body))
+		return types.GetAlbumResponse{}, fmt.Errorf("error when getting album list, status: %s", res.Status)
+	}
 
 	var albumResponse types.GetAlbumResponse
 	bs, err := io.ReadAll(res.Body)
@@ -163,17 +169,62 @@ func (sc *SpotifyClient) GetAlbumList(artistId string) (types.GetAlbumResponse, 
 }
 
 func (sc *SpotifyClient) GetAlbumDetails(albumId string) (types.Albumv2, error) {
-	return types.Albumv2{}, nil
+	getAlbumDetails := "https://api-partner.spotify.com/pathfinder/v2/query"
+	body := types.PostQuery{
+		Variables: types.Variables{
+			URI:    fmt.Sprintf("spotify:album:%s", albumId),
+			Locale: "",
+			Offset: 0,
+			Limit:  50,
+		},
+		OperationName: "getAlbum",
+		Extensions: types.Extensions{
+			PersistedQuery: types.PersistedQuery{
+				Version:    1,
+				Sha256Hash: "b9bfabef66ed756e5e13f68a942deb60bd4125ec1f1be8cc42769dc0259b4b10",
+			},
+		},
+	}
+	jsonBody, _ := json.Marshal(body)
+	req, err := http.NewRequest("POST", getAlbumDetails, bytes.NewReader((jsonBody)))
+	if err != nil {
+		return types.Albumv2{}, err
+	}
+	sc.setV2Headers(req)
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return types.Albumv2{}, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		fmt.Println("request: ", getAlbumDetails)
+		body, _ := io.ReadAll(res.Body)
+		fmt.Println("response: ", string(body))
+		return types.Albumv2{}, fmt.Errorf("error when getting album details, status: %s", res.Status)
+	}
+
+	var albumResponse types.Albumv2
+	bs, err := io.ReadAll(res.Body)
+	if err != nil {
+		return types.Albumv2{}, err
+	}
+	err = json.Unmarshal(bs, &albumResponse)
+	if err != nil {
+		return types.Albumv2{}, err
+	}
+	return albumResponse, err
 }
 
 func (sc *SpotifyClient) setV1Headers(req *http.Request) {
-	req.Header.Set("Authorization", sc.v1Token)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+sc.v1Token)
 }
 
 func (sc *SpotifyClient) setV2Headers(req *http.Request) {
 	req.Header.Set("authorization", sc.v2Auth)
 	req.Header.Set("client-token", sc.v2Token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("content-Type", "application/json;charset=UTF-8")
+	req.Header.Set("accept", "application/json")
 }
