@@ -1,0 +1,84 @@
+{
+    "artists": {
+        "href": "https://api.spotify.com/v1/search?offset=0&limit=2&query=deadmau5&type=artist&market=AU",
+        "limit": 2,
+        "next": "https://api.spotify.com/v1/search?offset=2&limit=2&query=deadmau5&type=artist&market=AU",
+        "offset": 0,
+        "previous": null,
+        "total": 813,
+        "items": [
+            {
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/artist/2CIMQHirSU0MQqyYHq0eOx"
+                },
+                "followers": {
+                    "href": null,
+                    "total": 2847272
+                },
+                "genres": [
+                    "edm",
+                    "progressive house",
+                    "dubstep"
+                ],
+                "href": "https://api.spotify.com/v1/artists/2CIMQHirSU0MQqyYHq0eOx",
+                "id": "2CIMQHirSU0MQqyYHq0eOx",
+                "images": [
+                    {
+                        "url": "https://i.scdn.co/image/ab6761610000e5eb89ffabe57a25cedeca3309e7",
+                        "height": 640,
+                        "width": 640
+                    },
+                    {
+                        "url": "https://i.scdn.co/image/ab6761610000517489ffabe57a25cedeca3309e7",
+                        "height": 320,
+                        "width": 320
+                    },
+                    {
+                        "url": "https://i.scdn.co/image/ab6761610000f17889ffabe57a25cedeca3309e7",
+                        "height": 160,
+                        "width": 160
+                    }
+                ],
+                "name": "deadmau5",
+                "popularity": 70,
+                "type": "artist",
+                "uri": "spotify:artist:2CIMQHirSU0MQqyYHq0eOx"
+            },
+            {
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/artist/6nxWCVXbOlEVRexSbLsTer"
+                },
+                "followers": {
+                    "href": null,
+                    "total": 2504826
+                },
+                "genres": [
+                    "future bass"
+                ],
+                "href": "https://api.spotify.com/v1/artists/6nxWCVXbOlEVRexSbLsTer",
+                "id": "6nxWCVXbOlEVRexSbLsTer",
+                "images": [
+                    {
+                        "url": "https://i.scdn.co/image/ab6761610000e5ebd6ec6e1162ee709ad829cf82",
+                        "height": 640,
+                        "width": 640
+                    },
+                    {
+                        "url": "https://i.scdn.co/image/ab67616100005174d6ec6e1162ee709ad829cf82",
+                        "height": 320,
+                        "width": 320
+                    },
+                    {
+                        "url": "https://i.scdn.co/image/ab6761610000f178d6ec6e1162ee709ad829cf82",
+                        "height": 160,
+                        "width": 160
+                    }
+                ],
+                "name": "Flume",
+                "popularity": 73,
+                "type": "artist",
+                "uri": "spotify:artist:6nxWCVXbOlEVRexSbLsTer"
+            }
+        ]
+    }
+}
