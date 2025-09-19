@@ -105,7 +105,8 @@ type SpotifyClient struct {
 func (sc *SpotifyClient) Search(artistName string) (types.SearchResponse, error) {
 	client := &http.Client{}
 	// Get artist id
-	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=artist&market=AU&limit=1", artistName)
+	encodedName := strings.ReplaceAll(artistName, " ", "%20")
+	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=artist&market=AU&limit=1", encodedName)
 	getArtistRes, err := http.NewRequest("GET", getArtistUrl, nil)
 	if err != nil {
 		return types.SearchResponse{}, err
@@ -133,12 +134,36 @@ func (sc *SpotifyClient) Search(artistName string) (types.SearchResponse, error)
 	if err != nil {
 		return types.SearchResponse{}, err
 	}
+	if len(searchResponse.Artists.Items) == 0 {
+		return types.SearchResponse{}, fmt.Errorf("no artist found for %s", artistName)
+	}
 	return searchResponse, nil
 }
 
-func (sc *SpotifyClient) GetAlbumList(artistId string) (types.GetAlbumResponse, error) {
-	getAlbumsUrl := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums?include_groups=album&market=AU", artistId)
-	req, err := http.NewRequest("GET", getAlbumsUrl, nil)
+func (sc *SpotifyClient) GetAlbumList(artistId string) ([]types.AlbumItem, error) {
+	var albums []types.AlbumItem
+	getAlbumsUrl := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums?include_groups=album&market=AU&limit=50", artistId)
+	getAlbumRes, err := sc.getAlbums(getAlbumsUrl)
+	if err != nil {
+		return nil, err
+	}
+	albums = append(albums, getAlbumRes.Items...)
+	// won't be more than 100 albums
+	_, isStr := getAlbumRes.Next.(string)
+	if isStr {
+		getAlbumsUrl = getAlbumRes.Next.(string)
+		getAlbumRes, err := sc.getAlbums(getAlbumsUrl)
+		if err != nil {
+			return nil, err
+		}
+		albums = append(albums, getAlbumRes.Items...)
+	}
+
+	return albums, nil
+}
+
+func (sc *SpotifyClient) getAlbums(url string) (types.GetAlbumResponse, error) {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return types.GetAlbumResponse{}, err
 	}
@@ -151,7 +176,7 @@ func (sc *SpotifyClient) GetAlbumList(artistId string) (types.GetAlbumResponse, 
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		fmt.Println("request: ", getAlbumsUrl)
+		fmt.Println("request: ", url)
 		body, _ := io.ReadAll(res.Body)
 		fmt.Println("response: ", string(body))
 		return types.GetAlbumResponse{}, fmt.Errorf("error when getting album list, status: %s", res.Status)

@@ -118,9 +118,10 @@ func SetAuth(config *client.Config, _ []string) error {
 }
 
 func GetArtistInfo(config *client.Config, data []string) error {
-	if len(data) != 1 {
+	if len(data) == 0 {
 		return errors.New("enter an artist name")
 	}
+	artistName := strings.Join(data, " ")
 	errorOut := func(err error) {
 		fmt.Println(err.Error())
 		fmt.Print(" > ")
@@ -132,24 +133,25 @@ func GetArtistInfo(config *client.Config, data []string) error {
 			errorOut(err)
 			return
 		}
-		searchResponse, err := sc.Search(data[0])
+		searchResponse, err := sc.Search(artistName)
 		if err != nil {
 			errorOut(err)
 			return
 		}
 
 		artist := searchResponse.Artists.Items[0]
+		fmt.Printf("getting %s\n > ", artist.Name)
 
 		// get a list of albums from the artist
-		albumsResponse, err := sc.GetAlbumList(artist.ID)
+		albumsReturned, err := sc.GetAlbumList(artist.ID)
 		if err != nil {
 			errorOut(err)
 			return
 		}
 
 		// for each album, get the songs + their playcounts
-		albumList := make([]types.Albumv2, 0, len(albumsResponse.Items))
-		for _, album := range albumsResponse.Items {
+		albumList := make([]types.Albumv2, 0, len(albumsReturned))
+		for _, album := range albumsReturned {
 			albumDetails, err := sc.GetAlbumDetails(album.ID)
 			if err != nil {
 				errorOut(err)
@@ -177,6 +179,7 @@ func GetArtistInfo(config *client.Config, data []string) error {
 			errorOut(err)
 			return
 		}
+		fmt.Printf("done %s\n > ", artistName)
 	}()
 
 	return nil
