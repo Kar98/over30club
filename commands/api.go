@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Kar98/over30club/client"
@@ -227,4 +229,50 @@ func (sc *SpotifyClient) setV2Headers(req *http.Request) {
 	req.Header.Set("client-token", sc.v2Token)
 	req.Header.Set("content-Type", "application/json;charset=UTF-8")
 	req.Header.Set("accept", "application/json")
+}
+
+func (sc *SpotifyClient) GenerateArtist(artist types.ArtistItem, albums []types.Albumv2) (types.Artist, error) {
+	convertedAlbums := make([]types.Album, 0, len(albums))
+	for _, album := range albums {
+		convertedAlbums = append(convertedAlbums, sc.toAlbum(album))
+	}
+	return types.Artist{
+		Name:   artist.Name,
+		ID:     artist.ID,
+		Albums: convertedAlbums,
+		// Members and AverageAge to be filled in later
+		Members:    []types.Member{},
+		AverageAge: 0,
+	}, nil
+}
+
+func (sc *SpotifyClient) toAlbum(album types.Albumv2) types.Album {
+	totalPlaycount := 0
+	tracks := make([]types.Track, 0, len(album.Data.AlbumUnion.TracksV2.Items))
+	for _, track := range album.Data.AlbumUnion.TracksV2.Items {
+		playcount, _ := strconv.Atoi(track.Track.Playcount)
+		trackSplits := strings.Split(track.Track.URI, ":")
+		if len(trackSplits) != 3 {
+			panic("unexpected track URI format - " + track.Track.URI)
+		}
+		tracks = append(tracks, types.Track{
+			Name:      track.Track.Name,
+			ID:        trackSplits[2],
+			PlayCount: playcount,
+		})
+		totalPlaycount += playcount
+	}
+
+	albumSplits := strings.Split(album.Data.AlbumUnion.URI, ":")
+	if len(albumSplits) != 3 {
+		panic("unexpected album URI format - " + album.Data.AlbumUnion.URI)
+	}
+	albumID := albumSplits[2]
+	return types.Album{
+		Name:           album.Data.AlbumUnion.Name,
+		ReleaseYear:    album.Data.AlbumUnion.Date.IsoString.Year(),
+		ID:             albumID,
+		Tracks:         tracks,
+		TotalPlaycount: totalPlaycount,
+	}
 }

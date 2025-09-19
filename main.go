@@ -19,6 +19,10 @@ func main() {
 			return
 		}
 	}
+	err := os.MkdirAll(client.ArtistDir, os.ModePerm)
+	if err != nil {
+		return
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 	config := client.Config{Scanner: scanner}
 	cmds := commands.GenerateCommands()

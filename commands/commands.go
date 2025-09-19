@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Kar98/over30club/client"
+	"github.com/Kar98/over30club/types"
 )
 
 type CliCommand struct {
@@ -28,10 +30,15 @@ func GenerateCommands() map[string]CliCommand {
 			Description: "Displays a help message",
 			Callback:    Help,
 		},
-		"settoken": {
+		"settokens": {
 			Name:        "set token",
-			Description: "Sets the auth and client token for v2 requests",
+			Description: "Sets the client token and auth for v2 requests",
 			Callback:    SetTokens,
+		},
+		"setauth": {
+			Name:        "set auth",
+			Description: "Sets the auth for v2 requests",
+			Callback:    SetAuth,
 		},
 		"getartist": {
 			Name:        "get artist",
@@ -48,7 +55,7 @@ func GenerateCommands() map[string]CliCommand {
 
 func Help(config *client.Config, _ []string) error {
 	cmds := GenerateCommands()
-	fmt.Print("Usage:\n\n")
+	fmt.Print("Usage:\n")
 
 	for k, v := range cmds {
 		fmt.Printf("%s: %s\n", k, v.Description)
@@ -69,12 +76,10 @@ func SetTokens(config *client.Config, _ []string) error {
 	if token != "" {
 		config.V2.ClientToken = token
 	} else {
-		fmt.Println("no text entered")
-		return nil
+		return errors.New("no text entered")
 	}
 
-	fmt.Printf("token saved = %s\n", config.V2.ClientToken)
-	fmt.Print("Enter authorization > ")
+	fmt.Print("enter v2auth > ")
 
 	config.Scanner.Scan()
 	auth := config.Scanner.Text()
@@ -92,46 +97,88 @@ func SetTokens(config *client.Config, _ []string) error {
 	return nil
 }
 
+func SetAuth(config *client.Config, _ []string) error {
+	fmt.Printf("enter v2auth > ")
+	config.Scanner.Scan()
+	auth := config.Scanner.Text()
+	if auth != "" {
+		config.V2.Authorization = auth
+	} else {
+		return errors.New("no text entered")
+	}
+
+	fileData, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+	os.WriteFile(client.UserDataFile, fileData, 0644)
+	fmt.Println("auth saved")
+
+	return nil
+}
+
 func GetArtistInfo(config *client.Config, data []string) error {
 	if len(data) != 1 {
 		return errors.New("enter an artist name")
 	}
-	// Get the artist id
-	sc, err := NewSpotifyClient(config)
-	if err != nil {
-		return err
+	errorOut := func(err error) {
+		fmt.Println(err.Error())
+		fmt.Print(" > ")
 	}
-	searchResponse, err := sc.Search(data[0])
-	if err != nil {
-		return err
-	}
+	go func() {
+		// Get the artist id
+		sc, err := NewSpotifyClient(config)
+		if err != nil {
+			errorOut(err)
+			return
+		}
+		searchResponse, err := sc.Search(data[0])
+		if err != nil {
+			errorOut(err)
+			return
+		}
 
-	artistId := searchResponse.Artists.Items[0].ID
+		artist := searchResponse.Artists.Items[0]
 
-	// get a list of albums from the artist
-	albumsResponse, err := sc.GetAlbumList(artistId)
-	if err != nil {
-		return err
-	}
+		// get a list of albums from the artist
+		albumsResponse, err := sc.GetAlbumList(artist.ID)
+		if err != nil {
+			errorOut(err)
+			return
+		}
 
-	// for each album, get the songs + their playcounts
-	fmt.Printf("Arist: %s\n", searchResponse.Artists.Items[0].Name)
-	fmt.Printf("Artist ID: %s\n", artistId)
-	for _, album := range albumsResponse.Items {
-		fmt.Printf("Album: %s\n", album.Name)
-		fmt.Printf("Album ID: %s\n", album.ID)
-	}
-	albumDetails, err := sc.GetAlbumDetails(albumsResponse.Items[0].ID)
-	if err != nil {
-		return err
-	}
-	fmt.Println()
-	fmt.Printf("album name: %s\n", albumDetails.Data.AlbumUnion.Name)
-	for _, albumTrack := range albumDetails.Data.AlbumUnion.TracksV2.Items {
-		fmt.Printf("Track: %s, Playcount: %s\n", albumTrack.Track.Name, albumTrack.Track.Playcount)
-	}
+		// for each album, get the songs + their playcounts
+		albumList := make([]types.Albumv2, 0, len(albumsResponse.Items))
+		for _, album := range albumsResponse.Items {
+			albumDetails, err := sc.GetAlbumDetails(album.ID)
+			if err != nil {
+				errorOut(err)
+				return
+			}
+			albumList = append(albumList, albumDetails)
+			time.Sleep(1 * time.Second) // avoid rate limiting
+		}
+		outArtist, err := sc.GenerateArtist(artist, albumList)
+		if err != nil {
+			errorOut(err)
+			return
+		}
+		// save data to disk
+		outJson, err := json.MarshalIndent(outArtist, "", "  ")
+		if err != nil {
+			errorOut(err)
+			return
+		}
 
-	// save data to disk
+		filesafeName := strings.ReplaceAll(strings.ToLower(outArtist.Name), " ", "_")
+		filename := fmt.Sprintf("%s/%s.json", client.ArtistDir, filesafeName)
+		err = os.WriteFile(filename, outJson, 0644)
+		if err != nil {
+			errorOut(err)
+			return
+		}
+	}()
+
 	return nil
 }
 
