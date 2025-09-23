@@ -20,9 +20,9 @@ type Album struct {
 }
 
 type Artist struct {
-	Name       string   `json:"name"`
-	ID         string   `json:"id"`
-	Albums     []Album  `json:"albums"`
-	Members    []Member `json:"members"`
-	AverageAge float64  `json:"averageAge"`
+	Name           string   `json:"name"`
+	ID             string   `json:"id"`
+	Albums         []Album  `json:"albums"`
+	Members        []Member `json:"members"`
+	AvgYearOfBirth float64  `json:"avgYearOfBirth"`
 }

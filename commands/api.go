@@ -266,8 +266,8 @@ func (sc *SpotifyClient) GenerateArtist(artist types.ArtistItem, albums []types.
 		ID:     artist.ID,
 		Albums: convertedAlbums,
 		// Members and AverageAge to be filled in later
-		Members:    []types.Member{},
-		AverageAge: 0,
+		Members:        []types.Member{},
+		AvgYearOfBirth: 0,
 	}, nil
 }
 

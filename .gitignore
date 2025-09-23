@@ -1,4 +1,4 @@
 userdata/data.json
 artistdata/*
-display/
 node_modules/
+display/test.js
