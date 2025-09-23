@@ -173,6 +173,7 @@ func GetArtistInfo(config *client.Config, data []string) error {
 		}
 
 		filesafeName := strings.ReplaceAll(strings.ToLower(outArtist.Name), " ", "_")
+		filesafeName = strings.ReplaceAll(filesafeName, "/", "_")
 		filename := fmt.Sprintf("%s/%s.json", client.ArtistDir, filesafeName)
 		err = os.WriteFile(filename, outJson, 0644)
 		if err != nil {
