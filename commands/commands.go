@@ -152,6 +152,9 @@ func GetArtistInfo(config *client.Config, data []string) error {
 		// for each album, get the songs + their playcounts
 		albumList := make([]types.Albumv2, 0, len(albumsReturned))
 		for _, album := range albumsReturned {
+			if album.IsLiveAlbum() {
+				continue
+			}
 			albumDetails, err := sc.GetAlbumDetails(album.ID)
 			if err != nil {
 				errorOut(err)

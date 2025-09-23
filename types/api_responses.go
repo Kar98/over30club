@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type SearchResponse struct {
 	Artists Artists `json:"artists"`
@@ -64,6 +67,22 @@ type AlbumItem struct {
 	URI                  string       `json:"uri"`
 	Artists              []Artists    `json:"artists"`
 	AlbumGroup           string       `json:"album_group"`
+}
+
+func (i AlbumItem) IsLiveAlbum() bool {
+	if strings.Contains(i.Name, "(Live") {
+		return true
+	}
+	if strings.Contains(i.Name, "Live at ") {
+		return true
+	}
+	if strings.Contains(i.Name, "Live in ") {
+		return true
+	}
+	if strings.Contains(i.Name, "Live on ") {
+		return true
+	}
+	return false
 }
 
 type Albumv2 struct {
