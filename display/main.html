@@ -2,21 +2,123 @@
 <html>
   <head>
     <title>ECharts Example</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="echarts.min.js"></script>
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
   </head>
   <body>
     <div id="main" style="width: 100%; height: 85vh; overflow: hidden"></div>
     <script>
+      function simplifyName(name) {
+        let outName = name.toLowerCase();
+        outName = outName.replaceAll(" ", "_");
+        outName = outName.replaceAll("/", "_");
+        return outName;
+      }
+      function filterAlbums(albumList, filterList) {
+        /*
+        filterList[]
+        {
+          "name": "Empty Sky",
+          "releaseYear": 1969
+        }
+        */
+        /*
+       albumList[]
+        {
+          "name": "The Devil Wears Prada: A New Musical",
+          "releaseYear": 2025,
+          "id": "4wVOH8PfZ1PCYsGqyVjOYM",
+          "tracks": [],
+          "totalPlaycount": 616859
+        }
+       */
+        let outputList = [];
+        for (let i = 0; i < filterList.length; i++) {
+          let albums = albumList.filter(
+            (album) => album.releaseYear == filterList[i].releaseYear
+          );
+          console.log("albums", albums);
+          if (albums.length == 0) {
+            console.log(
+              "Missing album",
+              filterList[i].releaseYear,
+              filterList[i].name
+            );
+            throw new Error("Missing album");
+          }
+          // If 2 albums released in same year, we need to find the right one
+          if (albums.length == 1) {
+            outputList.push(albums[0]);
+          } else {
+            // Match on exact first. If no exact, then use a substring
+            console.log("album > 1");
+            let nameFilter = albums.filter(
+              (album) =>
+                album.name.toLowerCase() == filterList[i].name.toLowerCase()
+            );
+            if (nameFilter.length == 0) {
+              nameFilter = albums.filter((album) =>
+                album.name
+                  .toLowerCase()
+                  .includes(filterList[i].name.toLowerCase())
+              );
+            }
+            // This must return 1 album otherwise there is a bug or error in the data
+            if (nameFilter.length != 1) {
+              console.log(
+                "multi year album release fail",
+                nameFilter,
+                filterList[i].releaseYear,
+                filterList[i].name
+              );
+              throw new Error("multi year album fail");
+            }
+            outputList.push(nameFilter[0]);
+          }
+        }
+        return outputList;
+      }
       (async function () {
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        // File read
-        const res = await fetch("../artistdata/ac_dc.json");
-        const text = await res.text();
+        let artistName = "Ed Sheeran";
+        // Get the artist info
+        artistName = simplifyName(artistName);
+        let res = await fetch(`../artistdata/${artistName}.json`);
+        let text = await res.text();
         const artistData = JSON.parse(text);
-        const artistName = artistData.name;
-        const albums = [];
+
+        // Filter if possible
+        try {
+          res = await fetch(`../artistdata/filter.json`);
+          text = await res.text();
+          const filterData = JSON.parse(text);
+          // If artist is in filter, then do filter
+          const filterRule = filterData.filter(
+            (filter) => simplifyName(filter.artistName) == artistName
+          );
+          if (filterRule.length == 0) {
+            throw new Error("missing " + artistName);
+          }
+          filteredAlbums = filterAlbums(
+            artistData.albums,
+            filterRule[0].albums
+          );
+          console.log("filtered albums", filteredAlbums);
+          artistData.albums = filteredAlbums;
+        } catch (e) {
+          console.log(e);
+          console.log("no filter available for " + artistName);
+        }
+        // Display
+        const artistNameLabel = artistData.name;
+        let albums = [];
         for (const album of artistData.albums) {
           albums.push({
             name: album.name,
@@ -24,24 +126,23 @@
             totalPlaycount: album.totalPlaycount,
           });
         }
+        console.log("before sort", albums);
+        albums = albums.sort((a, b) => a.ageAtRelease - b.ageAtRelease);
         let ageOfArtistAtRelease = [];
         let playcountInMils = [];
-        for (let i = albums.length - 1; i >= 0; i--) {
-          console.log(albums[i].name);
+        let labelStates = [];
+        for (let i = 0; i < albums.length; i++) {
           ageOfArtistAtRelease.push(`${albums[i].ageAtRelease}`);
           const inmil = albums[i].totalPlaycount / 1000000;
           playcountInMils.push(parseFloat(inmil.toFixed(1)));
+          labelStates.push({
+            isToggled: false,
+            originalLabel: parseFloat(inmil.toFixed(1)) + "m",
+            albumName: albums[i].name,
+          });
         }
-        console.log(ageOfArtistAtRelease);
-        console.log(playcountInMils);
 
-        let labelStates = playcountInMils.map((_, index) => ({
-          isToggled: false,
-          originalLabel: playcountInMils[index] + "m",
-          albumName: albums[albums.length - 1 - index].name, // Reverse index to match loop
-        }));
-
-        let yMax = 500;
+        let labelSize = 42 - ageOfArtistAtRelease.length;
 
         option = {
           grid: {
@@ -52,7 +153,7 @@
             containLabel: true,
           },
           title: {
-            text: artistName,
+            text: artistNameLabel,
             subtext: "some data here",
             bottom: "0%",
             //top: 'bottom',
@@ -71,8 +172,8 @@
             axisLabel: {
               fontSize: 20,
               fontWeight: "bolder",
-              inside: true,
-              color: "#fff",
+              inside: false,
+              color: "#000",
             },
             axisTick: {
               show: false,
@@ -85,14 +186,14 @@
           yAxis: {
             type: "value",
             axisLabel: {
-              show: false, // Hide Y-axis labels
+              show: false,
             },
             splitLine: { show: false },
           },
           dataZoom: null,
           series: [
             {
-              barCategoryGap: "0%",
+              barCategoryGap: "1%",
               type: "bar",
               showBackground: false,
               label: {
@@ -102,7 +203,7 @@
                   return value.value + `m`;
                 },
                 position: "top",
-                fontSize: 20,
+                fontSize: labelSize,
                 color: "black",
               },
               itemStyle: {
@@ -132,23 +233,21 @@
         option && myChart.setOption(option);
 
         myChart.on("click", function (params) {
-          if (params.seriesType === "bar") {
-            labelStates[params.dataIndex].isToggled =
-              !labelStates[params.dataIndex].isToggled;
-            myChart.setOption({
-              series: [
-                {
-                  label: {
-                    formatter: function (params) {
-                      return labelStates[params.dataIndex].isToggled
-                        ? labelStates[params.dataIndex].albumName
-                        : labelStates[params.dataIndex].originalLabel;
-                    },
+          labelStates[params.dataIndex].isToggled =
+            !labelStates[params.dataIndex].isToggled;
+          myChart.setOption({
+            series: [
+              {
+                label: {
+                  formatter: function (params) {
+                    return labelStates[params.dataIndex].isToggled
+                      ? labelStates[params.dataIndex].albumName
+                      : labelStates[params.dataIndex].originalLabel;
                   },
                 },
-              ],
-            });
-          }
+              },
+            ],
+          });
         });
       })();
     </script>

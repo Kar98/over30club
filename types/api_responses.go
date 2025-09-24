@@ -69,17 +69,25 @@ type AlbumItem struct {
 	AlbumGroup           string       `json:"album_group"`
 }
 
-func (i AlbumItem) IsLiveAlbum() bool {
-	if strings.Contains(i.Name, "(Live") {
+// We don't want live albums, compilations, etc. Preferably only studio albums
+func (i AlbumItem) IsUnwantedAlbum() bool {
+	lowerName := strings.ToLower(i.Name)
+	if strings.Contains(lowerName, "(live") {
 		return true
 	}
-	if strings.Contains(i.Name, "Live at ") {
+	if strings.Contains(lowerName, "live at ") {
 		return true
 	}
-	if strings.Contains(i.Name, "Live in ") {
+	if strings.Contains(lowerName, "live in ") {
 		return true
 	}
-	if strings.Contains(i.Name, "Live on ") {
+	if strings.Contains(lowerName, "live on ") {
+		return true
+	}
+	if strings.Contains(lowerName, "live from ") {
+		return true
+	}
+	if strings.Contains(lowerName, "(tour") {
 		return true
 	}
 	return false
@@ -178,6 +186,17 @@ type Albumv2 struct {
 			} `json:"items"`
 		} `json:"albumUnion"`
 	} `json:"data"`
+}
+
+// If all tracks contain "live" then it's a live album
+func (a Albumv2) IsLiveAlbum() bool {
+	for _, track := range a.Data.AlbumUnion.TracksV2.Items {
+		trackName := strings.ToLower(track.Track.Name)
+		if !strings.Contains(trackName, "live") {
+			return false
+		}
+	}
+	return true
 }
 
 type TokenResponse struct {

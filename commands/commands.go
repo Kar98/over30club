@@ -152,13 +152,16 @@ func GetArtistInfo(config *client.Config, data []string) error {
 		// for each album, get the songs + their playcounts
 		albumList := make([]types.Albumv2, 0, len(albumsReturned))
 		for _, album := range albumsReturned {
-			if album.IsLiveAlbum() {
+			if album.IsUnwantedAlbum() {
 				continue
 			}
 			albumDetails, err := sc.GetAlbumDetails(album.ID)
 			if err != nil {
 				errorOut(err)
 				return
+			}
+			if albumDetails.IsLiveAlbum() {
+				continue
 			}
 			albumList = append(albumList, albumDetails)
 			time.Sleep(1 * time.Second) // avoid rate limiting

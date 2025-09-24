@@ -2,3 +2,4 @@ userdata/data.json
 artistdata/*
 node_modules/
 display/test.js
+display/echarts.min.js
