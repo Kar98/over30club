@@ -42,7 +42,6 @@
           let albums = albumList.filter(
             (album) => album.releaseYear == filterList[i].releaseYear
           );
-          console.log("albums", albums);
           if (albums.length == 0) {
             console.log(
               "Missing album",
@@ -56,19 +55,19 @@
             outputList.push(albums[0]);
           } else {
             // Match on exact first. If no exact, then use a substring
-            console.log("album > 1");
             let nameFilter = albums.filter(
               (album) =>
                 album.name.toLowerCase() == filterList[i].name.toLowerCase()
             );
             if (nameFilter.length == 0) {
+              console.log("no match, using exact");
               nameFilter = albums.filter((album) =>
                 album.name
                   .toLowerCase()
                   .includes(filterList[i].name.toLowerCase())
               );
             }
-            // This must return 1 album otherwise there is a bug or error in the data
+            // This must return 1 album otherwise there is a bug or error in the data...
             if (nameFilter.length != 1) {
               console.log(
                 "multi year album release fail",
@@ -87,7 +86,7 @@
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        let artistName = "Ed Sheeran";
+        let artistName = "Elton john";
         // Get the artist info
         artistName = simplifyName(artistName);
         let res = await fetch(`../artistdata/${artistName}.json`);
@@ -134,10 +133,10 @@
         for (let i = 0; i < albums.length; i++) {
           ageOfArtistAtRelease.push(`${albums[i].ageAtRelease}`);
           const inmil = albums[i].totalPlaycount / 1000000;
-          playcountInMils.push(parseFloat(inmil.toFixed(1)));
+          playcountInMils.push(Math.round(inmil));
           labelStates.push({
             isToggled: false,
-            originalLabel: parseFloat(inmil.toFixed(1)) + "m",
+            originalLabel: Math.round(inmil) + "m",
             albumName: albums[i].name,
           });
         }
@@ -154,7 +153,7 @@
           },
           title: {
             text: artistNameLabel,
-            subtext: "some data here",
+            subtext: "Total plays per album",
             bottom: "0%",
             //top: 'bottom',
             left: "5%",
