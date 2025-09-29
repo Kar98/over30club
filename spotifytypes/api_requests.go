@@ -1,4 +1,4 @@
-package types
+package spotifytypes
 
 type PostQuery struct {
 	Variables     Variables  `json:"variables"`

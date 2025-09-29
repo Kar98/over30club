@@ -1,4 +1,4 @@
-package types
+package spotifytypes
 
 import (
 	"strings"
@@ -7,6 +7,7 @@ import (
 
 type SearchResponse struct {
 	Artists Artists `json:"artists"`
+	Albums  Albums  `json:"albums"`
 }
 type ExternalUrls struct {
 	Spotify string `json:"spotify"`
@@ -42,6 +43,16 @@ type Artists struct {
 	Items    []ArtistItem `json:"items"`
 }
 
+type Albums struct {
+	Href     string      `json:"href"`
+	Limit    int         `json:"limit"`
+	Next     string      `json:"next"`
+	Offset   int         `json:"offset"`
+	Previous any         `json:"previous"`
+	Total    int         `json:"total"`
+	Items    []AlbumItem `json:"items"`
+}
+
 type GetAlbumResponse struct {
 	Href     string      `json:"href"`
 	Limit    int         `json:"limit"`
@@ -65,8 +76,17 @@ type AlbumItem struct {
 	ReleaseDatePrecision string       `json:"release_date_precision"`
 	Type                 string       `json:"type"`
 	URI                  string       `json:"uri"`
-	Artists              []Artists    `json:"artists"`
+	Artists              []MiniArtist `json:"artists"`
 	AlbumGroup           string       `json:"album_group"`
+}
+
+type MiniArtist struct {
+	ExternalUrls ExternalUrls `json:"external_urls"`
+	Href         string       `json:"href"`
+	ID           string       `json:"id"`
+	Name         string       `json:"name"`
+	Type         string       `json:"type"`
+	URI          string       `json:"uri"`
 }
 
 // We don't want live albums, compilations, etc. Preferably only studio albums

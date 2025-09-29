@@ -38,10 +38,17 @@
         }
        */
         let outputList = [];
+        console.log(albumList);
         for (let i = 0; i < filterList.length; i++) {
           let albums = albumList.filter(
-            (album) => album.releaseYear == filterList[i].releaseYear
+            (album) =>
+              album.releaseYear == filterList[i].releaseYear &&
+              album.name
+                .toLowerCase()
+                .includes(filterList[i].name.toLowerCase())
           );
+
+          console.log("filter", filterList[i].releaseYear, filterList[i].name);
           if (albums.length == 0) {
             console.log(
               "Missing album",
@@ -51,34 +58,10 @@
             throw new Error("Missing album");
           }
           // If 2 albums released in same year, we need to find the right one
-          if (albums.length == 1) {
-            outputList.push(albums[0]);
-          } else {
-            // Match on exact first. If no exact, then use a substring
-            let nameFilter = albums.filter(
-              (album) =>
-                album.name.toLowerCase() == filterList[i].name.toLowerCase()
-            );
-            if (nameFilter.length == 0) {
-              console.log("no match, using exact");
-              nameFilter = albums.filter((album) =>
-                album.name
-                  .toLowerCase()
-                  .includes(filterList[i].name.toLowerCase())
-              );
-            }
-            // This must return 1 album otherwise there is a bug or error in the data...
-            if (nameFilter.length != 1) {
-              console.log(
-                "multi year album release fail",
-                nameFilter,
-                filterList[i].releaseYear,
-                filterList[i].name
-              );
-              throw new Error("multi year album fail");
-            }
-            outputList.push(nameFilter[0]);
+          if (albums.length != 1) {
+            console.log("multiple matches, getting first one", ...albums);
           }
+          outputList.push(albums[0]);
         }
         return outputList;
       }
@@ -86,7 +69,7 @@
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        let artistName = "Elton john";
+        let artistName = "abba";
         // Get the artist info
         artistName = simplifyName(artistName);
         let res = await fetch(`../artistdata/${artistName}.json`);
@@ -109,7 +92,6 @@
             artistData.albums,
             filterRule[0].albums
           );
-          console.log("filtered albums", filteredAlbums);
           artistData.albums = filteredAlbums;
         } catch (e) {
           console.log(e);
@@ -125,7 +107,6 @@
             totalPlaycount: album.totalPlaycount,
           });
         }
-        console.log("before sort", albums);
         albums = albums.sort((a, b) => a.ageAtRelease - b.ageAtRelease);
         let ageOfArtistAtRelease = [];
         let playcountInMils = [];
