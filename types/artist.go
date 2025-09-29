@@ -23,13 +23,14 @@ type Album struct {
 }
 
 type Artist struct {
-	Name           string   `json:"name"`
-	ID             string   `json:"id"`
-	Albums         []Album  `json:"albums"`
-	Members        []Member `json:"members"`
-	AvgYearOfBirth float64  `json:"avgYearOfBirth"`
+	Name           string  `json:"name"`
+	ID             string  `json:"id"`
+	Albums         []Album `json:"albums"`
+	AvgYearOfBirth int     `json:"avgYearOfBirth"`
 }
 
+// With Query is used for tracing how the album names were matched. Because it's very hard to match album names
+// this will help track down any edge cases that appear with the albums (eg Rammstein album -> Untitled)
 type AlbumWithQuery struct {
 	spotifytypes.AlbumItem
 	QueryName string `json:"queryName,omitempty"`

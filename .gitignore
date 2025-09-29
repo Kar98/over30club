@@ -3,3 +3,4 @@ artistdata/*
 node_modules/
 display/test.js
 display/echarts.min.js
+main_token_test.go

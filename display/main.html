@@ -69,7 +69,7 @@
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        let artistName = "abba";
+        let artistName = "Beyoncé";
         // Get the artist info
         artistName = simplifyName(artistName);
         let res = await fetch(`../artistdata/${artistName}.json`);

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -52,6 +53,11 @@ func GenerateCommands() map[string]CliCommand {
 			Name:        "test",
 			Description: "A test command",
 			Callback:    Test,
+		},
+		"getinputs": {
+			Name:        "get artists via input",
+			Description: "Gets the artists based on the _input.json file provided",
+			Callback:    GetViaInput,
 		},
 	}
 }
@@ -174,16 +180,8 @@ func GetArtistInfo(config *client.Config, data []string) error {
 			errorOut(err)
 			return
 		}
-		// save data to disk
-		outJson, err := json.MarshalIndent(outArtist, "", "  ")
-		if err != nil {
-			errorOut(err)
-			return
-		}
 
-		filesafeName := artistNameToFilepath(outArtist.Name)
-		filename := fmt.Sprintf("%s/%s.json", client.ArtistDir, filesafeName)
-		err = os.WriteFile(filename, outJson, 0644)
+		err = saveArtistToDisk(outArtist)
 		if err != nil {
 			errorOut(err)
 			return
@@ -214,7 +212,7 @@ func Test(config *client.Config, data []string) error {
 	return err
 }
 
-func GetViaInput(config *client.Config) error {
+func GetViaInput(config *client.Config, _ []string) error {
 	// Get list from artistinput
 	sc, err := NewSpotifyClient(config)
 	if err != nil {
@@ -233,10 +231,11 @@ func GetViaInput(config *client.Config) error {
 	// We have a list of albums. For each album, search for it in Spotify.
 	foundAlbums := []types.AlbumWithQuery{}
 	for _, artistInput := range inputFile {
-		filesafeName := artistNameToFilepath(artistInput.ArtistName)
-		f, err := os.Open(client.ArtistDir + filesafeName)
+		filesafeName := artistNameToFilepath(artistInput.ArtistName) + ".json"
+		f, err := os.Open(path.Join(client.ArtistDir, filesafeName))
 		// If file exists, then we don't need to get extra data
 		if err == nil {
+			fmt.Println("data for", filesafeName)
 			f.Close()
 			continue
 		}
@@ -250,7 +249,8 @@ func GetViaInput(config *client.Config) error {
 		for _, album := range artistInput.Albums {
 			albumItem, err := sc.getAlbumFromSearch(album.Name, album.ReleaseYear, artist.ID)
 			if errors.Is(err, ErrNoAlbums) {
-				fmt.Printf("album not found for %s\n", album.Name)
+				fmt.Printf("album not found: %s releaseYear: %d", album.Name, album.ReleaseYear)
+				continue
 			} else if err != nil {
 				return err
 			}
@@ -259,7 +259,7 @@ func GetViaInput(config *client.Config) error {
 
 		// All albums are gathered and have the correct IDs
 		// Get the detailed album details along with the
-		albumList := make([]types.Albumv2WithQuery, 0, len(foundAlbums))
+		albumList := make([]types.Albumv2WithQuery, 0)
 		for _, album := range foundAlbums {
 			albumDetails, err := sc.GetAlbumDetails(album.ID)
 			if err != nil {
@@ -268,10 +268,41 @@ func GetViaInput(config *client.Config) error {
 			albumList = append(albumList, types.Albumv2WithQuery{Albumv2: albumDetails, QueryName: album.QueryName})
 			time.Sleep(500 * time.Millisecond) // avoid rate limiting
 		}
-		sc.GenerateArtistFromInput(artist, albumList)
+		artistData, err := sc.GenerateArtistFromInput(artist, albumList, getAverageYearOfBirth(artistInput.ArtistYearOfBirth))
+		if err != nil {
+			return err
+		}
+		err = saveArtistToDisk(artistData)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("done %s\n > ", artistData.Name)
 	}
 
 	return nil
+}
+
+func saveArtistToDisk(artist types.Artist) error {
+	// save data to disk
+	outJson, err := json.MarshalIndent(artist, "", "  ")
+	if err != nil {
+		return err
+	}
+	filesafeName := artistNameToFilepath(artist.Name)
+	filename := fmt.Sprintf("%s/%s.json", client.ArtistDir, filesafeName)
+	err = os.WriteFile(filename, outJson, 0644)
+	return err
+}
+
+func getAverageYearOfBirth(years []int) int {
+	if len(years) == 0 {
+		return 0
+	}
+	sum := 0
+	for _, y := range years {
+		sum += y
+	}
+	return int(sum / len(years))
 }
 
 func (sc SpotifyClient) getAlbumFromSearch(albumName string, releaseYear int, artistId string) (spotifytypes.AlbumItem, error) {
@@ -287,20 +318,32 @@ func (sc SpotifyClient) getAlbumFromSearch(albumName string, releaseYear int, ar
 
 	for _, album := range relevantAlbums {
 		// Exact match takes the highest preference. There shouldn't be 2 albums released in the same year by the 1 artist
-		if album.Name == albumName {
+		if strings.EqualFold(album.Name, albumName) {
 			return album, nil
 		}
+	}
+
+	for _, album := range relevantAlbums {
 		// However exact match isn't likely due to punctuation/releases/etc.
 		// Try to get a partial match + release year
-		albumYear, err := time.Parse("2006-01-02", album.ReleaseDate)
+		var albumYear time.Time
+		var err error
+		if album.ReleaseDatePrecision == "year" {
+			albumYear, err = time.Parse("2006", album.ReleaseDate)
+		} else {
+			albumYear, err = time.Parse("2006-01-02", album.ReleaseDate)
+		}
 		if err != nil {
+			fmt.Println("album.ReleaseDate: ", album.ReleaseDate, album.Name)
 			return spotifytypes.AlbumItem{}, err
 		}
-		if strings.Contains(album.Name, albumName) && albumYear.Year() == releaseYear {
+		relevantAlbumLower := strings.ToLower(album.Name)
+		albumNameLower := strings.ToLower(albumName)
+		if strings.Contains(relevantAlbumLower, albumNameLower) && albumYear.Year() == releaseYear {
 			return album, nil
 		}
 		// Flip the partial string check
-		if strings.Contains(albumName, album.Name) && albumYear.Year() == releaseYear {
+		if strings.Contains(albumNameLower, relevantAlbumLower) && albumYear.Year() == releaseYear {
 			return album, nil
 		}
 		// If still can't find then use release year only. If 2 albums released in same year then the first one will be grabbed.
@@ -329,8 +372,13 @@ func CleanInput(text string) ([]string, error) {
 }
 
 func filterByArtistId(searchResponse spotifytypes.SearchResponse, artistId string) []spotifytypes.AlbumItem {
-	data := []spotifytypes.AlbumItem{}
+	var data []spotifytypes.AlbumItem
 	for _, album := range searchResponse.Albums.Items {
+		// Even though we specify to only search albums in the search params, spotify will still return singles
+		// example: Beyoncé -> albumId = 45BFNKQ0VGAXACLAEOy9Mv
+		if album.AlbumType != "album" {
+			continue
+		}
 		for _, artist := range album.Artists {
 			if artist.ID == artistId {
 				data = append(data, album)

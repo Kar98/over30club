@@ -268,6 +268,7 @@ func (sc *SpotifyClient) GetAlbumDetails(albumId string) (spotifytypes.Albumv2, 
 
 	if res.StatusCode != 200 {
 		fmt.Println("request: ", getAlbumDetails)
+		fmt.Println("request body: ", body)
 		body, _ := io.ReadAll(res.Body)
 		fmt.Println("response: ", string(body))
 		return spotifytypes.Albumv2{}, fmt.Errorf("error when getting album details, status: %s", res.Status)
@@ -305,13 +306,12 @@ func (sc *SpotifyClient) GenerateArtist(artist spotifytypes.ArtistItem, albums [
 		Name:   artist.Name,
 		ID:     artist.ID,
 		Albums: convertedAlbums,
-		// Members and AverageAge to be filled in later
-		Members:        []types.Member{},
+		// AvgYearOfBirth to be filled in later
 		AvgYearOfBirth: 0,
 	}, nil
 }
 
-func (sc *SpotifyClient) GenerateArtistFromInput(artist spotifytypes.ArtistItem, albums []types.Albumv2WithQuery) (types.Artist, error) {
+func (sc *SpotifyClient) GenerateArtistFromInput(artist spotifytypes.ArtistItem, albums []types.Albumv2WithQuery, avgYearOfBirth int) (types.Artist, error) {
 	convertedAlbums := make([]types.Album, 0, len(albums))
 	for _, album := range albums {
 		convertedAlbum := sc.toAlbum(album.Albumv2)
@@ -322,12 +322,10 @@ func (sc *SpotifyClient) GenerateArtistFromInput(artist spotifytypes.ArtistItem,
 		convertedAlbums = append(convertedAlbums, convertedAlbum)
 	}
 	return types.Artist{
-		Name:   artist.Name,
-		ID:     artist.ID,
-		Albums: convertedAlbums,
-		// Members and AverageAge to be filled in later
-		Members:        []types.Member{},
-		AvgYearOfBirth: 0,
+		Name:           artist.Name,
+		ID:             artist.ID,
+		Albums:         convertedAlbums,
+		AvgYearOfBirth: avgYearOfBirth,
 	}, nil
 }
 
@@ -338,7 +336,7 @@ func (sc *SpotifyClient) toAlbum(album spotifytypes.Albumv2) types.Album {
 		playcount, _ := strconv.Atoi(track.Track.Playcount)
 		trackSplits := strings.Split(track.Track.URI, ":")
 		if len(trackSplits) != 3 {
-			panic("unexpected track URI format - " + track.Track.URI)
+			panic("unexpected track URI format - " + track.Track.URI + "name: " + track.Track.Name)
 		}
 		tracks = append(tracks, types.Track{
 			Name:      track.Track.Name,
@@ -350,7 +348,7 @@ func (sc *SpotifyClient) toAlbum(album spotifytypes.Albumv2) types.Album {
 
 	albumSplits := strings.Split(album.Data.AlbumUnion.URI, ":")
 	if len(albumSplits) != 3 {
-		panic("unexpected album URI format - " + album.Data.AlbumUnion.URI)
+		panic("unexpected album URI format - " + album.Data.AlbumUnion.URI + "name: " + album.Data.AlbumUnion.Name)
 	}
 	albumID := albumSplits[2]
 	return types.Album{
