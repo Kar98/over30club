@@ -145,7 +145,7 @@ func (sc *SpotifyClient) SearchArtist(artistName string) (spotifytypes.SearchRes
 func (sc *SpotifyClient) SearchAlbums(albumName string) (spotifytypes.SearchResponse, error) {
 	client := &http.Client{}
 	// Get artist id
-	encodedName := url.PathEscape(albumName)
+	encodedName := url.QueryEscape(albumName)
 	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=album&market=AU", encodedName)
 	getArtistRes, err := http.NewRequest("GET", getArtistUrl, nil)
 	if err != nil {

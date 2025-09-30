@@ -14,6 +14,21 @@ func TestInputFile(t *testing.T) {
 	assertNoError(t, err)
 }
 
+func TestDebug(t *testing.T) {
+	rawData := types.ArtistInput{{
+		ArtistName: "test",
+	},
+		{
+			ArtistName: "test2",
+		}}
+
+	for _, artist := range rawData {
+		artist.ArtistName = "newval"
+	}
+
+	t.Log("test")
+}
+
 func assert(t *testing.T, val1 any, val2 any) {
 	if val1 != val2 {
 		t.Fail()

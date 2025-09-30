@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -193,7 +194,8 @@ func GetArtistInfo(config *client.Config, data []string) error {
 }
 
 func artistNameToFilepath(name string) string {
-	filesafeName := strings.ReplaceAll(strings.ToLower(name), " ", "_")
+	filesafeName := strings.ToLower(name)
+	filesafeName = strings.ReplaceAll(filesafeName, " ", "_")
 	filesafeName = strings.ReplaceAll(filesafeName, "/", "_")
 	return filesafeName
 }
@@ -212,14 +214,21 @@ func Test(config *client.Config, data []string) error {
 	return err
 }
 
-func GetViaInput(config *client.Config, _ []string) error {
+func GetViaInput(config *client.Config, args []string) error {
+	var inputFilepath string
+	if len(args) == 1 {
+		inputFilepath = args[0] // to make this testable
+	} else {
+		inputFilepath = client.ArtistInputFile
+	}
+	defer fmt.Println("done getinputs")
 	// Get list from artistinput
 	sc, err := NewSpotifyClient(config)
 	if err != nil {
 		return err
 	}
 	var inputFile types.ArtistInput
-	fileBytes, err := os.ReadFile(client.ArtistInputFile)
+	fileBytes, err := os.ReadFile(inputFilepath)
 	if err != nil {
 		return err
 	}
@@ -230,26 +239,29 @@ func GetViaInput(config *client.Config, _ []string) error {
 
 	// We have a list of albums. For each album, search for it in Spotify.
 	foundAlbums := []types.AlbumWithQuery{}
-	for _, artistInput := range inputFile {
+	for i, artistInput := range inputFile {
 		filesafeName := artistNameToFilepath(artistInput.ArtistName) + ".json"
 		f, err := os.Open(path.Join(client.ArtistDir, filesafeName))
 		// If file exists, then we don't need to get extra data
-		if err == nil {
-			fmt.Println("data for", filesafeName)
+		if err == nil || artistInput.Processed {
+			fmt.Println("data exists for", filesafeName)
 			f.Close()
+			inputFile[i].Processed = true
 			continue
 		}
+
 		// get artist ID
 		searchResponse, err := sc.SearchArtist(artistInput.ArtistName)
 		if err != nil {
 			return err
 		}
 		artist := searchResponse.Artists.Items[0]
+		fmt.Println("getting", artist.Name)
 
 		for _, album := range artistInput.Albums {
 			albumItem, err := sc.getAlbumFromSearch(album.Name, album.ReleaseYear, artist.ID)
 			if errors.Is(err, ErrNoAlbums) {
-				fmt.Printf("album not found: %s releaseYear: %d", album.Name, album.ReleaseYear)
+				fmt.Printf("album not found: %s releaseYear: %d\n", album.Name, album.ReleaseYear)
 				continue
 			} else if err != nil {
 				return err
@@ -276,7 +288,22 @@ func GetViaInput(config *client.Config, _ []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("done %s\n > ", artistData.Name)
+		inputFile[i].Processed = true
+	}
+
+	// Write back to the inputs file to update any processed artists
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	err = enc.Encode(inputFile)
+	if err != nil {
+		fmt.Println("could not encode input file", err.Error())
+		return nil
+	}
+	err = os.WriteFile(inputFilepath, buf.Bytes(), 0644)
+	if err != nil {
+		fmt.Println("could not update input file", err.Error())
 	}
 
 	return nil

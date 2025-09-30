@@ -16,4 +16,5 @@ type ArtistInput []struct {
 		Name        string `json:"name"`
 		ReleaseYear int    `json:"releaseYear"`
 	} `json:"albums"`
+	Processed bool `json:"processed,omitempty"`
 }
