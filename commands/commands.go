@@ -55,8 +55,8 @@ func GenerateCommands() map[string]CliCommand {
 			Description: "A test command",
 			Callback:    Test,
 		},
-		"getinputs": {
-			Name:        "get artists via input",
+		"get": {
+			Name:        "get artists via input file",
 			Description: "Gets the artists based on the _input.json file provided",
 			Callback:    GetViaInput,
 		},
@@ -237,14 +237,14 @@ func GetViaInput(config *client.Config, args []string) error {
 		return err
 	}
 
-	// We have a list of albums. For each album, search for it in Spotify.
-	foundAlbums := []types.AlbumWithQuery{}
 	for i, artistInput := range inputFile {
+		// We have a list of albums. For each album, search for it in Spotify.
+		foundAlbums := []types.AlbumWithQuery{}
 		filesafeName := artistNameToFilepath(artistInput.ArtistName) + ".json"
 		f, err := os.Open(path.Join(client.ArtistDir, filesafeName))
 		// If file exists, then we don't need to get extra data
 		if err == nil || artistInput.Processed {
-			fmt.Println("data exists for", filesafeName)
+			//fmt.Println("data exists for", filesafeName)
 			f.Close()
 			inputFile[i].Processed = true
 			continue
@@ -259,9 +259,9 @@ func GetViaInput(config *client.Config, args []string) error {
 		fmt.Println("getting", artist.Name)
 
 		for _, album := range artistInput.Albums {
-			albumItem, err := sc.getAlbumFromSearch(album.Name, album.ReleaseYear, artist.ID)
+			albumItem, err := sc.getAlbumFromSearch(album.Name, album.ReleaseYear, artist.ID, artist.Name)
 			if errors.Is(err, ErrNoAlbums) {
-				fmt.Printf("album not found: %s releaseYear: %d\n", album.Name, album.ReleaseYear)
+				fmt.Printf("album not found: '%s' releaseYear: %d\n", album.Name, album.ReleaseYear)
 				continue
 			} else if err != nil {
 				return err
@@ -332,8 +332,8 @@ func getAverageYearOfBirth(years []int) int {
 	return int(sum / len(years))
 }
 
-func (sc SpotifyClient) getAlbumFromSearch(albumName string, releaseYear int, artistId string) (spotifytypes.AlbumItem, error) {
-	albumSearch, err := sc.SearchAlbums(albumName)
+func (sc SpotifyClient) getAlbumFromSearch(albumName string, releaseYear int, artistId string, artistName string) (spotifytypes.AlbumItem, error) {
+	albumSearch, err := sc.SearchAlbums(albumName, artistName)
 	if err != nil {
 		return spotifytypes.AlbumItem{}, err
 	}

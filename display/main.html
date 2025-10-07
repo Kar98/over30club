@@ -69,7 +69,9 @@
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        let artistName = "Backstreet boys";
+        // ***
+        let artistName = "Bruce springsteen";
+        // ***
         // Get the artist info
         artistName = simplifyName(artistName);
         let res = await fetch(`../artistdata/${artistName}.json`);
@@ -123,6 +125,9 @@
         }
 
         let labelSize = 42 - ageOfArtistAtRelease.length;
+        if (labelSize < 14) {
+          labelSize = 14;
+        }
 
         option = {
           grid: {
@@ -134,7 +139,7 @@
           },
           title: {
             text: artistNameLabel,
-            subtext: "Total plays per album",
+            subtext: "Artist age when released vs total plays",
             bottom: "0%",
             //top: 'bottom',
             left: "5%",

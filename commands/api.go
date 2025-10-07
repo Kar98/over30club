@@ -142,11 +142,11 @@ func (sc *SpotifyClient) SearchArtist(artistName string) (spotifytypes.SearchRes
 	return searchResponse, nil
 }
 
-func (sc *SpotifyClient) SearchAlbums(albumName string) (spotifytypes.SearchResponse, error) {
+func (sc *SpotifyClient) SearchAlbums(albumName, artistName string) (spotifytypes.SearchResponse, error) {
 	client := &http.Client{}
 	// Get artist id
-	encodedName := url.QueryEscape(albumName)
-	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=album&market=AU", encodedName)
+	query := fmt.Sprintf("%s artist:%s", albumName, artistName)
+	getArtistUrl := fmt.Sprintf("https://api.spotify.com/v1/search?query=%s&type=album&limit=40", url.QueryEscape(query))
 	getArtistRes, err := http.NewRequest("GET", getArtistUrl, nil)
 	if err != nil {
 		return spotifytypes.SearchResponse{}, err
@@ -175,7 +175,7 @@ func (sc *SpotifyClient) SearchAlbums(albumName string) (spotifytypes.SearchResp
 		return spotifytypes.SearchResponse{}, err
 	}
 	if len(searchResponse.Albums.Items) == 0 {
-		return spotifytypes.SearchResponse{}, fmt.Errorf("no albums found for %s", albumName)
+		return spotifytypes.SearchResponse{}, ErrNoAlbums
 	}
 	return searchResponse, nil
 }
