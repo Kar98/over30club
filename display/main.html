@@ -9,6 +9,7 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <link rel="stylesheet" href="fonts.css" />
   </head>
   <body>
     <div id="main" style="width: 100%; height: 85vh; overflow: hidden"></div>
@@ -21,22 +22,22 @@
       }
       function filterAlbums(albumList, filterList) {
         /*
-        filterList[]
-        {
-          "name": "Empty Sky",
-          "releaseYear": 1969
-        }
-        */
+              filterList[]
+              {
+                "name": "Empty Sky",
+                "releaseYear": 1969
+              }
+              */
         /*
-       albumList[]
-        {
-          "name": "The Devil Wears Prada: A New Musical",
-          "releaseYear": 2025,
-          "id": "4wVOH8PfZ1PCYsGqyVjOYM",
-          "tracks": [],
-          "totalPlaycount": 616859
-        }
-       */
+             albumList[]
+              {
+                "name": "The Devil Wears Prada: A New Musical",
+                "releaseYear": 2025,
+                "id": "4wVOH8PfZ1PCYsGqyVjOYM",
+                "tracks": [],
+                "totalPlaycount": 616859
+              }
+             */
         let outputList = [];
         console.log(albumList);
         for (let i = 0; i < filterList.length; i++) {
@@ -70,7 +71,7 @@
         var myChart = echarts.init(chartDom);
         var option;
         // ***
-        let artistName = "Bruce springsteen";
+        let artistName = "radiohead";
         // ***
         // Get the artist info
         artistName = simplifyName(artistName);
@@ -139,17 +140,20 @@
           },
           title: {
             text: artistNameLabel,
-            subtext: "Artist age when released vs total plays",
+            subtext: "Artist age at release vs Total album plays",
             bottom: "0%",
             //top: 'bottom',
             left: "5%",
             textStyle: {
-              fontSize: 30,
+              fontSize: 50,
+              fontFamily: "Lexend Exa8",
               color: "#000",
             },
             subtextStyle: {
-              fontSize: 25,
+              fontSize: 30,
+              fontFamily: "Lexend Exa8",
               color: "#000",
+              fontWeight: "bold",
             },
           },
           xAxis: {
@@ -194,7 +198,9 @@
               itemStyle: {
                 color: function (params) {
                   // Alternate colors based on data index
-                  return params.dataIndex % 2 === 0 ? "#2378f7" : "#2378f7";
+                  //return "#2350f7";
+                  return "rgba(130, 96, 195, 1)";
+                  //return params.dataIndex % 2 === 0 ? "#2378f7" : "#2350f7";
                 },
               },
               emphasis: {
@@ -205,9 +211,12 @@
                 },
                 itemStyle: {
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: "#2378f7" },
-                    { offset: 0.7, color: "#2378f7" },
-                    { offset: 1, color: "#83bff6" },
+                    // { offset: 0, color: "#2378f7" },
+                    // { offset: 0.7, color: "#2378f7" },
+                    // { offset: 1, color: "#83bff6" },
+                    { offset: 0, color: "rgba(130, 96, 195, 0.5)" },
+                    { offset: 0.8, color: "rgba(130, 96, 195, 1)" },
+                    { offset: 1, color: "rgba(130, 96, 195, 1)" },
                   ]),
                 },
               },

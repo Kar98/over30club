@@ -295,6 +295,7 @@ func (sc *SpotifyClient) setV2Headers(req *http.Request) {
 	req.Header.Set("client-token", sc.v2Token)
 	req.Header.Set("content-Type", "application/json;charset=UTF-8")
 	req.Header.Set("accept", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.7258.139 Spotify/1.2.73.474 Safari/537.36")
 }
 
 func (sc *SpotifyClient) GenerateArtist(artist spotifytypes.ArtistItem, albums []spotifytypes.Albumv2) (types.Artist, error) {
