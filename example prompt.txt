@@ -1,0 +1,10 @@
+I have a list of artists. Get their studio albums, and what year they were released in. Get the artists year of birth, if it cannot be found, then return a 0. Format the output as JSON with the following typescript format:
+type ArtistInfo = {
+  artistName: string;
+  albums: { name: string; releaseYear: number }[];
+  artistYearOfBirth: number[];
+}[];The artist list is:
+Greenday
+
+
+

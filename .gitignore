@@ -1,5 +1,5 @@
 userdata/data.json
-artistdata/*
+artistdata/*.json
 node_modules/
 display/test.js
 display/echarts.min.js
