@@ -45,6 +45,8 @@ It's best to download the echarts.js manually and place it in the /display direc
 
 `npx http-server -c-1`
 
+Go to http://127.0.0.1:8080/display/over30club.html
+
 Data is hardcoded to the artist's name. This was to get a clean 1080p screenshot when the browser was in full screenmode (f11)
 Simply update artistName to be the one you want. If the data is not there, then a blank white screen will be displayed
 

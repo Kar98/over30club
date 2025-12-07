@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ECharts Example</title>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script> -->
+    <script src="echarts.min.js"></script>
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="stylesheet" href="fonts.css" />
+  </head>
+  <body>
+    <div id="main" style="width: 100%; height: 85vh; overflow: hidden"></div>
+    <script>
+      function simplifyName(name) {
+        let outName = name.toLowerCase();
+        outName = outName.replaceAll(" ", "_");
+        outName = outName.replaceAll("/", "_");
+        return outName;
+      }
+      function getHighestTrack(tracks) {
+        let high = 0;
+        for (const track of tracks) {
+          if (track.playCount > high) {
+            high = track.playCount;
+          }
+        }
+        return high;
+      }
+      const fs = require("fs").promises;
+      const path = require("path");
+      async function listFiles(dir) {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        return entries.filter((e) => e.isFile()).map((e) => e.name);
+      }
+      // usage:
+      (async () => {
+        const files = await listFiles("./artistdata");
+        const artistFiles = [];
+        for (const file of files) {
+          if (file[0] !== "_") {
+            artistFiles.push(file);
+          }
+        }
+        console.log(artistFiles);
+      })();
+      (async function () {
+        var chartDom = document.getElementById("main");
+        var myChart = echarts.init(chartDom);
+        var option;
+        const artistName = "radiohead";
+        let res = await fetch(`../artistdata/${simplifyName(artistName)}.json`);
+        let text = await res.text();
+        const artistData = JSON.parse(text);
+
+        const albumTracks = [];
+        const highestTrack = [];
+        const sortedAll = artistData.albums.sort(
+          (a, b) => b.totalPlaycount - a.totalPlaycount
+        );
+
+        for (const album of sortedAll) {
+          let high = getHighestTrack(album.tracks);
+          highestTrack.push(high);
+          albumTracks.push(album.totalPlaycount - high);
+        }
+
+        const xaxisAll = [];
+        for (let album of sortedAll) {
+          xaxisAll.push(album.name);
+        }
+
+        // Remove the high and see
+        const tracksMinusHigh = []; // all combined tracks, without the highest track
+        const sortedMinusHigh = artistData.albums.sort((a, b) => {
+          const bHigh = getHighestTrack(b.tracks);
+          const aHigh = getHighestTrack(a.tracks);
+          return b.totalPlaycount - bHigh - (a.totalPlaycount - aHigh);
+        });
+        for (const album of sortedMinusHigh) {
+          tracksMinusHigh.push(
+            album.totalPlaycount - getHighestTrack(album.tracks)
+          );
+        }
+
+        const xaxisMinusHigh = [];
+        for (let album of sortedMinusHigh) {
+          xaxisMinusHigh.push(album.name);
+        }
+        const albumSeriesMinusHigh = [
+          {
+            data: tracksMinusHigh,
+            name: "Combined missing high",
+            stack: "total",
+            type: "bar",
+          },
+          { data: [] },
+        ];
+
+        const albumSeries = [
+          {
+            data: albumTracks,
+            name: "All others",
+            stack: "total",
+            type: "bar",
+          },
+          {
+            data: highestTrack,
+            name: "Most popular",
+            stack: "total",
+            type: "bar",
+          },
+        ];
+
+        option = {
+          legend: {
+            selectedMode: false,
+          },
+          yAxis: {
+            type: "value",
+          },
+          xAxis: {
+            type: "category",
+            data: xaxisAll, // xaxisAll xaxisMinusHigh
+            axisLabel: {
+              formatter: function (value, index) {
+                const pattern = [0, 1, 2];
+                const newlines = pattern[index % 3];
+                return "\n\n".repeat(newlines) + value;
+              },
+              fontSize: 10,
+              interval: 0,
+              fontWeight: "bolder",
+              inside: false,
+              color: "#000",
+            },
+          },
+          series: albumSeries, // albumSeries albumSeriesMinusHigh
+        };
+        option && myChart.setOption(option);
+
+        myChart.on("click", function (params) {
+          myChart.setOption({
+            series: albumSeriesMinusHigh,
+            xAxis: {
+              data: xaxisMinusHigh,
+            },
+          });
+        });
+        //
+      })();
+    </script>
+  </body>
+</html>
