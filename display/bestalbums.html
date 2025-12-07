@@ -30,29 +30,17 @@
         }
         return high;
       }
-      const fs = require("fs").promises;
-      const path = require("path");
-      async function listFiles(dir) {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
-        return entries.filter((e) => e.isFile()).map((e) => e.name);
-      }
-      // usage:
-      (async () => {
-        const files = await listFiles("./artistdata");
-        const artistFiles = [];
-        for (const file of files) {
-          if (file[0] !== "_") {
-            artistFiles.push(file);
-          }
-        }
-        console.log(artistFiles);
-      })();
+
       (async function () {
+        const files = await fetch("http://localhost:8081/api/artist-files");
+        const filesJson = await files.json();
+        let currIdx = 0;
         var chartDom = document.getElementById("main");
         var myChart = echarts.init(chartDom);
         var option;
-        const artistName = "radiohead";
-        let res = await fetch(`../artistdata/${simplifyName(artistName)}.json`);
+        console.log(files);
+        const artistName = filesJson[currIdx];
+        let res = await fetch(`../artistdata/${simplifyName(artistName)}`);
         let text = await res.text();
         const artistData = JSON.parse(text);
 
