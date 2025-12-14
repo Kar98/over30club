@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	port := flag.String("port", "8080", "port to listen on")
+	port := flag.String("port", "8081", "port to listen on")
 	root := flag.String("root", ".", "project root (where artistdata and display live)")
 	flag.Parse()
 

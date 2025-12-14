@@ -60,6 +60,19 @@
         }
 
         let currIdx = 0;
+        let lastIncrementTime = Date.now();
+        // Exposed so keyboard handler can switch the chart series/xAxis
+        let albumSeriesMinusHigh = null;
+        let xaxisMinusHigh = null;
+
+        function toggleToMinusHigh() {
+          if (albumSeriesMinusHigh && xaxisMinusHigh) {
+            myChart.setOption({
+              series: albumSeriesMinusHigh,
+              xAxis: { data: xaxisMinusHigh },
+            });
+          }
+        }
 
         async function loadAndRender(idx) {
           const artistName = artistFiles[idx];
@@ -98,9 +111,9 @@
           const tracksMinusHigh = sortedMinusHigh.map(
             (a) => a.totalPlaycount - getHighestTrack(a.tracks)
           );
-          const xaxisMinusHigh = sortedMinusHigh.map((a) => a.name);
+          xaxisMinusHigh = sortedMinusHigh.map((a) => a.name);
 
-          const albumSeriesMinusHigh = [
+          albumSeriesMinusHigh = [
             {
               data: tracksMinusHigh,
               name: "Combined missing high",
@@ -155,28 +168,44 @@
 
           myChart.setOption(option, { notMerge: true });
 
-          // reset existing click handler to avoid duplicates
-          if (myChart.off) myChart.off("click");
-          myChart.on("click", function (params) {
-            myChart.setOption({
-              series: albumSeriesMinusHigh,
-              xAxis: { data: xaxisMinusHigh },
-            });
-          });
+          // removed chart click handler; Enter key will toggle the view
         }
 
-        // Keyboard handler: increment currIdx on spacebar
+        // Auto-increment if 10 seconds have passed
+        setInterval(() => {
+          const now = Date.now();
+          if (now - lastIncrementTime >= 10000) {
+            currIdx = (currIdx + 1) % artistFiles.length;
+            lastIncrementTime = now;
+            loadAndRender(currIdx);
+            // Toggle to minus-high view 5 seconds after auto-increment
+            setTimeout(() => {
+              toggleToMinusHigh();
+            }, 5000);
+          }
+        }, 1000);
+
+        // Keyboard handler: increment currIdx on spacebar; Enter toggles series
         window.addEventListener("keydown", (e) => {
+          if (
+            document.activeElement &&
+            /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)
+          )
+            return;
+
           if (e.code === "Space") {
-            if (
-              document.activeElement &&
-              /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)
-            )
-              return;
             e.preventDefault();
             if (e.repeat) return;
             currIdx = (currIdx + 1) % artistFiles.length;
+            lastIncrementTime = Date.now();
             loadAndRender(currIdx);
+            return;
+          }
+
+          if (e.code === "Enter") {
+            e.preventDefault();
+            if (e.repeat) return;
+            toggleToMinusHigh();
           }
         });
 
